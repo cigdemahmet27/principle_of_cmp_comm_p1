@@ -1,0 +1,339 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+% Code listing style
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    stringstyle=\color{red},
+    commentstyle=\color{green!50!black},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single,
+    breaklines=true
+}
+
+\title{Principles of Computer Communication\\Project 1: Data Transmission Simulation}
+\author{Ahmet Enes Çiğdem\\150220079}
+\date{December 2025}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+%==========================================================================
+\section{Introduction}
+%==========================================================================
+
+This project simulates the process of data transmission between two computers (Computer A and Computer B) using encoding, decoding, modulation, and demodulation techniques. The implementation covers four fundamental transmission modes:
+
+\begin{enumerate}
+    \item \textbf{Digital-to-Digital}: Line coding techniques for transmitting digital data over digital channels
+    \item \textbf{Digital-to-Analog}: Modulation schemes for transmitting digital data over analog channels
+    \item \textbf{Analog-to-Digital}: Source coding for converting analog signals to digital representation
+    \item \textbf{Analog-to-Analog}: Modulation techniques for transmitting analog data over analog channels
+\end{enumerate}
+
+The project includes a graphical user interface (GUI) built with Python's Tkinter library, allowing users to select transmission modes and algorithms interactively.
+
+%==========================================================================
+\section{Theoretical Background}
+%==========================================================================
+
+\subsection{Digital-to-Digital Encoding (Line Coding)}
+
+Line coding transforms a sequence of bits into a digital signal suitable for transmission over a physical medium. The key objectives are:
+\begin{itemize}
+    \item Clock synchronization between sender and receiver
+    \item Error detection capability
+    \item Bandwidth efficiency
+    \item DC component elimination
+\end{itemize}
+
+\subsection{Digital-to-Analog Modulation}
+
+Digital-to-analog modulation maps digital data onto an analog carrier signal by varying its amplitude, frequency, or phase. This is essential for transmitting digital data over bandpass channels like telephone lines or radio frequencies.
+
+\subsection{Analog-to-Digital Conversion}
+
+Analog-to-digital conversion involves sampling, quantization, and encoding continuous signals into discrete digital representations. This process is fundamental in digital communication systems.
+
+\subsection{Analog-to-Analog Modulation}
+
+Analog modulation techniques modulate one or more properties of a high-frequency carrier signal with an information-bearing analog signal.
+
+%==========================================================================
+\section{Digital-to-Digital Encoding Methods}
+%==========================================================================
+
+\subsection{NRZ-L (Non-Return-to-Zero Level)}
+
+In NRZ-L encoding, the signal level directly represents the bit value:
+\begin{itemize}
+    \item Bit '0' → High voltage level (+1)
+    \item Bit '1' → Low voltage level (-1)
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{nrz_l.png}
+    \caption{NRZ-L Encoding Example}
+    \label{fig:nrzl}
+\end{figure}
+
+\subsection{NRZI (Non-Return-to-Zero Inverted)}
+
+NRZI encodes data based on transitions rather than voltage levels:
+\begin{itemize}
+    \item Bit '0' → No transition (maintain current level)
+    \item Bit '1' → Transition at the beginning of the bit interval
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{nrzi.png}
+    \caption{NRZI Encoding Example}
+    \label{fig:nrzi}
+\end{figure}
+
+\subsection{Bipolar-AMI (Alternate Mark Inversion)}
+
+Bipolar-AMI uses three voltage levels:
+\begin{itemize}
+    \item Bit '0' → Zero voltage
+    \item Bit '1' → Alternating positive (+1) and negative (-1) pulses
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{bipolar_ami.png}
+    \caption{Bipolar-AMI Encoding Example}
+    \label{fig:ami}
+\end{figure}
+
+\subsection{Pseudoternary}
+
+Pseudoternary is the inverse of Bipolar-AMI:
+\begin{itemize}
+    \item Bit '1' → Zero voltage
+    \item Bit '0' → Alternating positive and negative pulses
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{pseudoternary.png}
+    \caption{Pseudoternary Encoding Example}
+    \label{fig:pseudo}
+\end{figure}
+
+\subsection{Manchester Encoding}
+
+Manchester encoding ensures a transition in the middle of each bit period:
+\begin{itemize}
+    \item Bit '0' → High-to-Low transition (falling edge)
+    \item Bit '1' → Low-to-High transition (rising edge)
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{manchester.png}
+    \caption{Manchester Encoding Example}
+    \label{fig:manchester}
+\end{figure}
+
+\subsection{Differential Manchester}
+
+Differential Manchester always has a transition in the middle of the bit period, with the bit value determined by the presence or absence of a transition at the beginning:
+\begin{itemize}
+    \item Bit '0' → Transition at the start of the interval
+    \item Bit '1' → No transition at the start
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{diff_manchester.png}
+    \caption{Differential Manchester Encoding Example}
+    \label{fig:diffman}
+\end{figure}
+
+%==========================================================================
+\section{Digital-to-Analog Modulation Methods}
+%==========================================================================
+
+\subsection{ASK (Amplitude Shift Keying)}
+
+ASK represents digital data by varying the amplitude of the carrier signal.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{ask.png}
+    \caption{ASK Modulation Example}
+    \label{fig:ask}
+\end{figure}
+
+\subsection{PSK/BPSK (Phase Shift Keying)}
+
+PSK encodes data by shifting the phase of the carrier.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{psk.png}
+    \caption{PSK Modulation Example}
+    \label{fig:psk}
+\end{figure}
+
+\subsection{BFSK (Binary Frequency Shift Keying)}
+
+BFSK uses two different frequencies to represent binary values.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{bfsk.png}
+    \caption{BFSK Modulation Example}
+    \label{fig:bfsk}
+\end{figure}
+
+%==========================================================================
+\section{Analog-to-Digital Encoding Methods}
+%==========================================================================
+
+\subsection{PCM (Pulse Code Modulation)}
+
+PCM converts analog signals to digital through sampling, quantization, and encoding.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{pcm.png}
+    \caption{PCM Encoding Example}
+    \label{fig:pcm}
+\end{figure}
+
+\subsection{Delta Modulation (DM)}
+
+Delta Modulation encodes the difference between consecutive samples.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{delta_modulation.png}
+    \caption{Delta Modulation Example}
+    \label{fig:delta}
+\end{figure}
+
+%==========================================================================
+\section{Analog-to-Analog Modulation Methods}
+%==========================================================================
+
+\subsection{AM (Amplitude Modulation)}
+
+In AM, the amplitude of the carrier varies with the message signal.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{AM.png}
+    \caption{Amplitude Modulation Example}
+    \label{fig:am}
+\end{figure}
+
+\subsection{FM (Frequency Modulation)}
+
+In FM, the instantaneous frequency varies with the message signal.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{FM.png}
+    \caption{Frequency Modulation Example}
+    \label{fig:fm}
+\end{figure}
+
+\subsection{PM (Phase Modulation)}
+
+In PM, the phase of the carrier varies directly with the message signal.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{PM.png}
+    \caption{Phase Modulation Example}
+    \label{fig:pm}
+\end{figure}
+
+%==========================================================================
+\section{Implementation Details}
+%==========================================================================
+
+\subsection{Project Structure}
+
+The project consists of the following Python modules:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{File} & \textbf{Description} \\
+\midrule
+\texttt{main.py} & GUI application with Tkinter \\
+\texttt{encoders.py} & Line coding encoders \\
+\texttt{modulators.py} & Digital and analog modulators \\
+\texttt{benchmark.py} & Performance comparison script \\
+\bottomrule
+\end{tabular}
+\caption{Project File Structure}
+\end{table}
+
+%==========================================================================
+\section{AI-Based Optimization}
+%==========================================================================
+
+\subsection{Optimization Techniques Applied}
+
+\begin{enumerate}
+    \item \textbf{NumPy Vectorization:} Replacing loops with array operations.
+    \item \textbf{Pre-allocated Arrays:} Using \texttt{np.empty()} for efficiency.
+    \item \textbf{Batch Processing:} Processing multiple samples simultaneously.
+\end{enumerate}
+
+\subsection{Benchmark Results}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Algorithm} & \textbf{Original (ms)} & \textbf{Optimized (ms)} & \textbf{Speedup} \\
+\midrule
+NRZ-L Encoder & 0.188 & 0.178 & 1.05x \\
+ASK Modulator & 5.066 & 1.812 & \textbf{2.79x} \\
+PSK Modulator & 4.611 & 1.759 & \textbf{2.62x} \\
+\midrule
+\textbf{Average} & - & - & \textbf{1.47x} \\
+\bottomrule
+\end{tabular}
+\caption{Performance Comparison: Original vs Optimized}
+\end{table}
+
+%==========================================================================
+\section{Conclusions}
+%==========================================================================
+
+This project successfully implemented a complete communication system simulation. The optimization analysis revealed that NumPy vectorization provides substantial benefits for compute-intensive operations like modulation.
+
+%==========================================================================
+\section*{References}
+%==========================================================================
+
+\begin{enumerate}
+    \item Forouzan, B. A. (2012). \textit{Data Communications and Networking}. McGraw-Hill.
+    \item Haykin, S. (2001). \textit{Communication Systems}. Wiley.
+\end{enumerate}
+
+\end{document}
