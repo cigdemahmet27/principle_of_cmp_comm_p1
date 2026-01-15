@@ -1,6 +1,7 @@
 \documentclass[12pt,a4paper]{article}
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{amssymb}
 \usepackage{hyperref}
 \usepackage{listings}
 \usepackage{xcolor}
@@ -19,7 +20,8 @@
     numbers=left,
     numberstyle=\tiny\color{gray},
     frame=single,
-    breaklines=true
+    breaklines=true,
+    showstringspaces=false
 }
 
 \title{Principles of Computer Communication\\Project 1: Data Transmission Simulation}
@@ -64,11 +66,19 @@ Line coding transforms a sequence of bits into a digital signal suitable for tra
 
 \subsection{Digital-to-Analog Modulation}
 
-Digital-to-analog modulation maps digital data onto an analog carrier signal by varying its amplitude, frequency, or phase. This is essential for transmitting digital data over bandpass channels like telephone lines or radio frequencies.
+Digital-to-analog modulation maps digital data onto an analog carrier signal by varying its amplitude, frequency, or phase. The general carrier signal is defined as:
+\begin{equation}
+s(t) = A \cdot \cos(2\pi f_c t + \phi)
+\end{equation}
+where $A$ is amplitude, $f_c$ is carrier frequency, and $\phi$ is phase.
 
 \subsection{Analog-to-Digital Conversion}
 
-Analog-to-digital conversion involves sampling, quantization, and encoding continuous signals into discrete digital representations. This process is fundamental in digital communication systems.
+Analog-to-digital conversion involves sampling, quantization, and encoding continuous signals into discrete digital representations. According to the \textbf{Nyquist-Shannon Sampling Theorem}:
+\begin{equation}
+f_s \geq 2 \cdot f_{max}
+\end{equation}
+where $f_s$ is the sampling frequency and $f_{max}$ is the maximum frequency component in the signal.
 
 \subsection{Analog-to-Analog Modulation}
 
@@ -82,9 +92,33 @@ Analog modulation techniques modulate one or more properties of a high-frequency
 
 In NRZ-L encoding, the signal level directly represents the bit value:
 \begin{itemize}
-    \item Bit '0' → High voltage level (+1)
-    \item Bit '1' → Low voltage level (-1)
+    \item Bit '0' $\rightarrow$ High voltage level (+1)
+    \item Bit '1' $\rightarrow$ Low voltage level (-1)
 \end{itemize}
+
+\textbf{Mathematical Representation:}
+\begin{equation}
+V(t) = \begin{cases}
++1 & \text{if bit} = 0 \\
+-1 & \text{if bit} = 1
+\end{cases}
+\end{equation}
+
+\textbf{Implementation Code:}
+\begin{lstlisting}
+def encode_nrz_l(self, bits):
+    """
+    NRZ-L (Non-Return-to-Zero Level):
+    0 -> High (+1), 1 -> Low (-1)
+    """
+    signal = []
+    for bit in bits:
+        if bit == '0':
+            signal.extend([1, 1])   # High
+        else:
+            signal.extend([-1, -1]) # Low
+    return signal
+\end{lstlisting}
 
 \begin{figure}[H]
     \centering
@@ -97,9 +131,33 @@ In NRZ-L encoding, the signal level directly represents the bit value:
 
 NRZI encodes data based on transitions rather than voltage levels:
 \begin{itemize}
-    \item Bit '0' → No transition (maintain current level)
-    \item Bit '1' → Transition at the beginning of the bit interval
+    \item Bit '0' $\rightarrow$ No transition (maintain current level)
+    \item Bit '1' $\rightarrow$ Transition at the beginning of the bit interval
 \end{itemize}
+
+\textbf{Mathematical Representation:}
+\begin{equation}
+V_n = \begin{cases}
+V_{n-1} & \text{if bit}_n = 0 \\
+-V_{n-1} & \text{if bit}_n = 1
+\end{cases}
+\end{equation}
+where $V_n$ is the voltage level at time interval $n$.
+
+\textbf{Implementation Code:}
+\begin{lstlisting}
+def encode_nrzi(self, bits):
+    """
+    NRZI: 0 -> No transition, 1 -> Transition
+    """
+    signal = []
+    current_level = 1
+    for bit in bits:
+        if bit == '1':
+            current_level *= -1  # Invert on '1'
+        signal.extend([current_level, current_level])
+    return signal
+\end{lstlisting}
 
 \begin{figure}[H]
     \centering
@@ -112,9 +170,35 @@ NRZI encodes data based on transitions rather than voltage levels:
 
 Bipolar-AMI uses three voltage levels:
 \begin{itemize}
-    \item Bit '0' → Zero voltage
-    \item Bit '1' → Alternating positive (+1) and negative (-1) pulses
+    \item Bit '0' $\rightarrow$ Zero voltage (0)
+    \item Bit '1' $\rightarrow$ Alternating positive (+1) and negative (-1) pulses
 \end{itemize}
+
+\textbf{Mathematical Representation:}
+\begin{equation}
+V_n = \begin{cases}
+0 & \text{if bit}_n = 0 \\
+(-1)^{k} & \text{if bit}_n = 1
+\end{cases}
+\end{equation}
+where $k$ is the count of preceding '1' bits.
+
+\textbf{Implementation Code:}
+\begin{lstlisting}
+def encode_bipolar_ami(self, bits):
+    """
+    Bipolar-AMI: 0 -> Zero, 1 -> Alternating +/- pulses
+    """
+    signal = []
+    last_one = -1  # Start negative, first '1' will be +1
+    for bit in bits:
+        if bit == '0':
+            signal.extend([0, 0])
+        else:
+            last_one *= -1  # Alternate polarity
+            signal.extend([last_one, last_one])
+    return signal
+\end{lstlisting}
 
 \begin{figure}[H]
     \centering
@@ -127,9 +211,35 @@ Bipolar-AMI uses three voltage levels:
 
 Pseudoternary is the inverse of Bipolar-AMI:
 \begin{itemize}
-    \item Bit '1' → Zero voltage
-    \item Bit '0' → Alternating positive and negative pulses
+    \item Bit '1' $\rightarrow$ Zero voltage (0)
+    \item Bit '0' $\rightarrow$ Alternating positive and negative pulses
 \end{itemize}
+
+\textbf{Mathematical Representation:}
+\begin{equation}
+V_n = \begin{cases}
+0 & \text{if bit}_n = 1 \\
+(-1)^{k} & \text{if bit}_n = 0
+\end{cases}
+\end{equation}
+where $k$ is the count of preceding '0' bits.
+
+\textbf{Implementation Code:}
+\begin{lstlisting}
+def encode_pseudoternary(self, bits):
+    """
+    Pseudoternary: 1 -> Zero, 0 -> Alternating +/- pulses
+    """
+    signal = []
+    last_zero = -1
+    for bit in bits:
+        if bit == '1':
+            signal.extend([0, 0])
+        else:
+            last_zero *= -1
+            signal.extend([last_zero, last_zero])
+    return signal
+\end{lstlisting}
 
 \begin{figure}[H]
     \centering
@@ -142,9 +252,33 @@ Pseudoternary is the inverse of Bipolar-AMI:
 
 Manchester encoding ensures a transition in the middle of each bit period:
 \begin{itemize}
-    \item Bit '0' → High-to-Low transition (falling edge)
-    \item Bit '1' → Low-to-High transition (rising edge)
+    \item Bit '0' $\rightarrow$ High-to-Low transition (falling edge)
+    \item Bit '1' $\rightarrow$ Low-to-High transition (rising edge)
 \end{itemize}
+
+\textbf{Mathematical Representation:}
+For each bit interval $[nT, (n+1)T]$:
+\begin{equation}
+V(t) = \begin{cases}
++1, -1 & \text{if bit} = 0 \quad \text{(first half +1, second half -1)} \\
+-1, +1 & \text{if bit} = 1 \quad \text{(first half -1, second half +1)}
+\end{cases}
+\end{equation}
+
+\textbf{Implementation Code:}
+\begin{lstlisting}
+def encode_manchester(self, bits):
+    """
+    Manchester: 0 -> High to Low, 1 -> Low to High
+    """
+    signal = []
+    for bit in bits:
+        if bit == '0':
+            signal.extend([1, -1])  # High -> Low
+        else:
+            signal.extend([-1, 1])  # Low -> High
+    return signal
+\end{lstlisting}
 
 \begin{figure}[H]
     \centering
@@ -157,9 +291,38 @@ Manchester encoding ensures a transition in the middle of each bit period:
 
 Differential Manchester always has a transition in the middle of the bit period, with the bit value determined by the presence or absence of a transition at the beginning:
 \begin{itemize}
-    \item Bit '0' → Transition at the start of the interval
-    \item Bit '1' → No transition at the start
+    \item Bit '0' $\rightarrow$ Transition at the start of the interval
+    \item Bit '1' $\rightarrow$ No transition at the start
 \end{itemize}
+
+\textbf{Mathematical Representation:}
+\begin{equation}
+V_n^{start} = \begin{cases}
+-V_{n-1}^{end} & \text{if bit}_n = 0 \quad \text{(transition at start)} \\
+V_{n-1}^{end} & \text{if bit}_n = 1 \quad \text{(no transition at start)}
+\end{cases}
+\end{equation}
+\begin{equation}
+V_n^{end} = -V_n^{start} \quad \text{(always transition in middle)}
+\end{equation}
+
+\textbf{Implementation Code:}
+\begin{lstlisting}
+def encode_diff_manchester(self, bits):
+    """
+    Differential Manchester: Always mid-transition.
+    0 -> Transition at start, 1 -> No transition at start
+    """
+    signal = []
+    current_level = -1
+    for bit in bits:
+        if bit == '0':
+            current_level *= -1  # Transition at start
+        signal.append(current_level)
+        current_level *= -1      # Mid-bit transition
+        signal.append(current_level)
+    return signal
+\end{lstlisting}
 
 \begin{figure}[H]
     \centering
@@ -176,6 +339,36 @@ Differential Manchester always has a transition in the middle of the bit period,
 
 ASK represents digital data by varying the amplitude of the carrier signal.
 
+\textbf{Mathematical Representation:}
+\begin{equation}
+s(t) = \begin{cases}
+A \cdot \sin(2\pi f_c t) & \text{if bit} = 1 \\
+0 & \text{if bit} = 0
+\end{cases}
+\end{equation}
+where:
+\begin{itemize}
+    \item $A$ = Carrier amplitude
+    \item $f_c$ = Carrier frequency (Hz)
+    \item $t$ = Time (seconds)
+\end{itemize}
+
+\textbf{Implementation Code:}
+\begin{lstlisting}
+def modulate_ask(self, bits, T=1):
+    """ Amplitude Shift Keying (Digital -> Analog) """
+    signal = np.array([])
+    t_bit = np.arange(0, T, 1/self.Fs)
+    
+    for bit in bits:
+        if bit == '1':
+            wave = self.Amp * np.sin(2 * np.pi * self.Fc * t_bit)
+        else:
+            wave = 0 * t_bit  # Zero amplitude
+        signal = np.concatenate((signal, wave))
+    return signal
+\end{lstlisting}
+
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{ask.png}
@@ -187,6 +380,42 @@ ASK represents digital data by varying the amplitude of the carrier signal.
 
 PSK encodes data by shifting the phase of the carrier.
 
+\textbf{Mathematical Representation:}
+\begin{equation}
+s(t) = A \cdot \sin(2\pi f_c t + \phi)
+\end{equation}
+For Binary PSK (BPSK):
+\begin{equation}
+\phi = \begin{cases}
+0° & \text{if bit} = 1 \\
+180° & \text{if bit} = 0
+\end{cases}
+\end{equation}
+
+This can be simplified to:
+\begin{equation}
+s(t) = \begin{cases}
++A \cdot \sin(2\pi f_c t) & \text{if bit} = 1 \\
+-A \cdot \sin(2\pi f_c t) & \text{if bit} = 0
+\end{cases}
+\end{equation}
+
+\textbf{Implementation Code:}
+\begin{lstlisting}
+def modulate_psk(self, bits, T=1):
+    """ Phase Shift Keying / BPSK (Digital -> Analog) """
+    signal = np.array([])
+    t_bit = np.arange(0, T, 1/self.Fs)
+    
+    for bit in bits:
+        if bit == '1':  # Phase 0
+            wave = self.Amp * np.sin(2 * np.pi * self.Fc * t_bit)
+        else:           # Phase 180 (multiply by -1)
+            wave = -1 * self.Amp * np.sin(2 * np.pi * self.Fc * t_bit)
+        signal = np.concatenate((signal, wave))
+    return signal
+\end{lstlisting}
+
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{psk.png}
@@ -197,6 +426,37 @@ PSK encodes data by shifting the phase of the carrier.
 \subsection{BFSK (Binary Frequency Shift Keying)}
 
 BFSK uses two different frequencies to represent binary values.
+
+\textbf{Mathematical Representation:}
+\begin{equation}
+s(t) = A \cdot \sin(2\pi f_i t)
+\end{equation}
+where:
+\begin{equation}
+f_i = \begin{cases}
+f_c + \Delta f & \text{if bit} = 1 \quad (f_1 = \text{high frequency}) \\
+f_c - \Delta f & \text{if bit} = 0 \quad (f_2 = \text{low frequency})
+\end{cases}
+\end{equation}
+and $\Delta f$ is the frequency deviation.
+
+\textbf{Implementation Code:}
+\begin{lstlisting}
+def modulate_bfsk(self, bits, T=1, f_dev=2):
+    """ Binary Frequency Shift Keying (Digital -> Analog) """
+    signal = np.array([])
+    t_bit = np.arange(0, T, 1/self.Fs)
+    f1 = self.Fc + f_dev  # High frequency for '1'
+    f2 = self.Fc - f_dev  # Low frequency for '0'
+    
+    for bit in bits:
+        if bit == '1':
+            wave = self.Amp * np.sin(2 * np.pi * f1 * t_bit)
+        else:
+            wave = self.Amp * np.sin(2 * np.pi * f2 * t_bit)
+        signal = np.concatenate((signal, wave))
+    return signal
+\end{lstlisting}
 
 \begin{figure}[H]
     \centering
@@ -211,7 +471,67 @@ BFSK uses two different frequencies to represent binary values.
 
 \subsection{PCM (Pulse Code Modulation)}
 
-PCM converts analog signals to digital through sampling, quantization, and encoding.
+PCM converts analog signals to digital through three steps: sampling, quantization, and encoding.
+
+\textbf{Mathematical Process:}
+
+\textbf{Step 1: Sampling} - Sample the analog signal at discrete intervals:
+\begin{equation}
+x[n] = x(nT_s), \quad n = 0, 1, 2, \ldots
+\end{equation}
+where $T_s = \frac{1}{f_s}$ is the sampling period.
+
+\textbf{Step 2: Normalization} - Normalize samples to range $[0, 1]$:
+\begin{equation}
+x_{norm}[n] = \frac{x[n] - x_{min}}{x_{max} - x_{min}}
+\end{equation}
+
+\textbf{Step 3: Quantization} - Map to discrete levels:
+\begin{equation}
+L[n] = \lfloor x_{norm}[n] \cdot (2^b - 1) \rfloor
+\end{equation}
+where $b$ is the bit depth (number of bits per sample) and $L[n] \in \{0, 1, \ldots, 2^b - 1\}$.
+
+\textbf{Step 4: Encoding} - Convert level to binary:
+\begin{equation}
+\text{Binary Code} = \text{bin}(L[n]) \text{ with } b \text{ bits}
+\end{equation}
+
+\textbf{Implementation Code:}
+\begin{lstlisting}
+def encode_pcm(self, analog_samples, bit_depth=3):
+    """
+    Pulse Code Modulation (PCM):
+    1. Normalize signal to 0-1 range
+    2. Quantize into 2^bit_depth levels
+    3. Convert level to binary string
+    """
+    if not analog_samples:
+        return ""
+    
+    # Find range for normalization
+    min_val = min(analog_samples)
+    max_val = max(analog_samples)
+    
+    if max_val == min_val:
+        return "0" * len(analog_samples) * bit_depth
+
+    num_levels = 2 ** bit_depth
+    encoded_bits = ""
+
+    for sample in analog_samples:
+        # Normalize sample to 0.0 -> 1.0
+        normalized = (sample - min_val) / (max_val - min_val)
+        
+        # Scale to integer level (0 to num_levels - 1)
+        level = int(normalized * (num_levels - 1))
+        
+        # Convert to binary string
+        binary_string = format(level, f'0{bit_depth}b')
+        encoded_bits += binary_string
+        
+    return encoded_bits
+\end{lstlisting}
 
 \begin{figure}[H]
     \centering
@@ -222,7 +542,47 @@ PCM converts analog signals to digital through sampling, quantization, and encod
 
 \subsection{Delta Modulation (DM)}
 
-Delta Modulation encodes the difference between consecutive samples.
+Delta Modulation encodes the difference between consecutive samples using only 1 bit per sample.
+
+\textbf{Mathematical Representation:}
+
+The approximation signal $\hat{x}(t)$ tracks the input signal $x(t)$:
+\begin{equation}
+\hat{x}[n] = \hat{x}[n-1] + \delta \cdot d[n]
+\end{equation}
+where:
+\begin{equation}
+d[n] = \begin{cases}
++1 & \text{if } x[n] > \hat{x}[n-1] \quad \text{(output bit = 1)} \\
+-1 & \text{if } x[n] \leq \hat{x}[n-1] \quad \text{(output bit = 0)}
+\end{cases}
+\end{equation}
+and $\delta$ is the step size.
+
+\textbf{Implementation Code:}
+\begin{lstlisting}
+def encode_delta_modulation(self, analog_samples, step_size=0.1):
+    """
+    Delta Modulation (DM):
+    1 -> Signal > Previous Approximation (Step Up)
+    0 -> Signal < Previous Approximation (Step Down)
+    """
+    if not analog_samples:
+        return ""
+
+    encoded_bits = ""
+    current_approximation = 0
+    
+    for sample in analog_samples:
+        if sample > current_approximation:
+            encoded_bits += '1'
+            current_approximation += step_size
+        else:
+            encoded_bits += '0'
+            current_approximation -= step_size
+            
+    return encoded_bits
+\end{lstlisting}
 
 \begin{figure}[H]
     \centering
@@ -239,6 +599,36 @@ Delta Modulation encodes the difference between consecutive samples.
 
 In AM, the amplitude of the carrier varies with the message signal.
 
+\textbf{Mathematical Representation:}
+\begin{equation}
+s(t) = A_c [1 + m(t)] \cos(2\pi f_c t)
+\end{equation}
+where:
+\begin{itemize}
+    \item $A_c$ = Carrier amplitude
+    \item $m(t)$ = Message signal (normalized to $[-1, 1]$)
+    \item $f_c$ = Carrier frequency
+\end{itemize}
+
+The modulation index is defined as:
+\begin{equation}
+\mu = \frac{|m(t)|_{max}}{A_c}
+\end{equation}
+
+\textbf{Implementation Code:}
+\begin{lstlisting}
+def modulate_am(self, analog_data):
+    """ Amplitude Modulation (Analog -> Analog) """
+    # Formula: s(t) = [1 + m(t)] * Carrier
+    # analog_data is normalized (-1 to 1)
+    t = np.arange(0, len(analog_data)/self.Fs, 1/self.Fs)
+    t = t[:len(analog_data)]  # Match length
+    
+    carrier = self.Amp * np.cos(2 * np.pi * self.Fc * t)
+    modulated_signal = (1 + analog_data) * carrier
+    return modulated_signal
+\end{lstlisting}
+
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{AM.png}
@@ -250,6 +640,42 @@ In AM, the amplitude of the carrier varies with the message signal.
 
 In FM, the instantaneous frequency varies with the message signal.
 
+\textbf{Mathematical Representation:}
+\begin{equation}
+s(t) = A_c \cos\left(2\pi f_c t + 2\pi k_f \int_{0}^{t} m(\tau) d\tau\right)
+\end{equation}
+where:
+\begin{itemize}
+    \item $k_f$ = Frequency sensitivity (Hz per unit amplitude)
+    \item $\int m(\tau) d\tau$ = Integral of the message signal
+\end{itemize}
+
+The instantaneous frequency is:
+\begin{equation}
+f_i(t) = f_c + k_f \cdot m(t)
+\end{equation}
+
+\textbf{Implementation Code:}
+\begin{lstlisting}
+def modulate_fm(self, analog_data, kf=5):
+    """
+    Frequency Modulation (Analog -> Analog)
+    Formula: s(t) = A * cos(2*pi*Fc*t + 2*pi*kf * integral(m(t)))
+    """
+    t = np.arange(0, len(analog_data)/self.Fs, 1/self.Fs)
+    t = t[:len(analog_data)]
+    
+    # Integrate the message signal (cumulative sum * dt)
+    dt = 1 / self.Fs
+    integral = np.cumsum(analog_data) * dt
+    
+    # Instantaneous phase
+    phase = 2 * np.pi * self.Fc * t + 2 * np.pi * kf * integral
+    modulated_signal = self.Amp * np.cos(phase)
+    
+    return modulated_signal
+\end{lstlisting}
+
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{FM.png}
@@ -260,6 +686,38 @@ In FM, the instantaneous frequency varies with the message signal.
 \subsection{PM (Phase Modulation)}
 
 In PM, the phase of the carrier varies directly with the message signal.
+
+\textbf{Mathematical Representation:}
+\begin{equation}
+s(t) = A_c \cos(2\pi f_c t + k_p \cdot m(t))
+\end{equation}
+where:
+\begin{itemize}
+    \item $k_p$ = Phase sensitivity (radians per unit amplitude)
+    \item $m(t)$ = Message signal
+\end{itemize}
+
+The instantaneous phase is:
+\begin{equation}
+\theta(t) = 2\pi f_c t + k_p \cdot m(t)
+\end{equation}
+
+\textbf{Implementation Code:}
+\begin{lstlisting}
+def modulate_pm(self, analog_data, kp=np.pi/2):
+    """
+    Phase Modulation (Analog -> Analog)
+    Formula: s(t) = A * cos(2*pi*Fc*t + kp * m(t))
+    """
+    t = np.arange(0, len(analog_data)/self.Fs, 1/self.Fs)
+    t = t[:len(analog_data)]
+    
+    # Phase is directly proportional to message signal
+    phase = 2 * np.pi * self.Fc * t + kp * analog_data
+    modulated_signal = self.Amp * np.cos(phase)
+    
+    return modulated_signal
+\end{lstlisting}
 
 \begin{figure}[H]
     \centering
@@ -283,8 +741,12 @@ The project consists of the following Python modules:
 \textbf{File} & \textbf{Description} \\
 \midrule
 \texttt{main.py} & GUI application with Tkinter \\
-\texttt{encoders.py} & Line coding encoders \\
+\texttt{encoders.py} & Line coding encoders (Digital-to-Digital, Analog-to-Digital) \\
 \texttt{modulators.py} & Digital and analog modulators \\
+\texttt{encoders\_optimized.py} & AI-optimized encoders using NumPy \\
+\texttt{modulators\_optimized.py} & AI-optimized modulators \\
+\texttt{decoders.py} & Signal decoders \\
+\texttt{demodulators.py} & Signal demodulators \\
 \texttt{benchmark.py} & Performance comparison script \\
 \bottomrule
 \end{tabular}
@@ -298,9 +760,46 @@ The project consists of the following Python modules:
 \subsection{Optimization Techniques Applied}
 
 \begin{enumerate}
-    \item \textbf{NumPy Vectorization:} Replacing loops with array operations.
-    \item \textbf{Pre-allocated Arrays:} Using \texttt{np.empty()} for efficiency.
-    \item \textbf{Batch Processing:} Processing multiple samples simultaneously.
+    \item \textbf{NumPy Vectorization:} Replacing Python loops with NumPy array operations for faster computation.
+    
+    \textbf{Example - Original NRZ-L:}
+    \begin{lstlisting}
+# Original: List-based approach
+signal = []
+for bit in bits:
+    if bit == '0':
+        signal.extend([1, 1])
+    else:
+        signal.extend([-1, -1])
+    \end{lstlisting}
+    
+    \textbf{Optimized NRZ-L:}
+    \begin{lstlisting}
+# Optimized: NumPy vectorization
+bit_array = np.array([1 if b == '0' else -1 for b in bits], dtype=np.int8)
+return np.repeat(bit_array, 2).tolist()
+    \end{lstlisting}
+    
+    \item \textbf{Pre-allocated Arrays:} Using \texttt{np.empty()} instead of growing lists for efficiency.
+    
+    \begin{lstlisting}
+# Pre-allocated array approach
+n = len(bits)
+signal = np.empty(n * 2, dtype=np.int8)
+for i, bit in enumerate(bits):
+    signal[2*i] = value
+    signal[2*i + 1] = value
+    \end{lstlisting}
+    
+    \item \textbf{Batch Processing:} Processing multiple samples simultaneously using NumPy broadcasting.
+    
+    \textbf{Example - Vectorized PCM:}
+    \begin{lstlisting}
+# Vectorized normalization and quantization
+samples = np.asarray(analog_samples)
+normalized = (samples - min_val) / (max_val - min_val)
+levels = np.clip((normalized * (num_levels - 1)).astype(int), 0, num_levels - 1)
+    \end{lstlisting}
 \end{enumerate}
 
 \subsection{Benchmark Results}
@@ -321,11 +820,23 @@ PSK Modulator & 4.611 & 1.759 & \textbf{2.62x} \\
 \caption{Performance Comparison: Original vs Optimized}
 \end{table}
 
+The results demonstrate that NumPy vectorization provides significant speedups, especially for compute-intensive operations like modulation where array operations can replace iterative calculations.
+
 %==========================================================================
 \section{Conclusions}
 %==========================================================================
 
-This project successfully implemented a complete communication system simulation. The optimization analysis revealed that NumPy vectorization provides substantial benefits for compute-intensive operations like modulation.
+This project successfully implemented a complete communication system simulation covering all four transmission modes: Digital-to-Digital, Digital-to-Analog, Analog-to-Digital, and Analog-to-Analog. Key achievements include:
+
+\begin{enumerate}
+    \item Implementation of 6 line coding schemes (NRZ-L, NRZI, Bipolar-AMI, Pseudoternary, Manchester, Differential Manchester)
+    \item Implementation of 3 digital modulation schemes (ASK, PSK, BFSK)
+    \item Implementation of 2 source coding methods (PCM, Delta Modulation)
+    \item Implementation of 3 analog modulation schemes (AM, FM, PM)
+    \item Performance optimization using NumPy vectorization with up to 2.79x speedup
+\end{enumerate}
+
+The optimization analysis revealed that NumPy vectorization provides substantial benefits for compute-intensive operations like modulation, while simpler operations like line coding show modest improvements.
 
 %==========================================================================
 \section*{References}
@@ -334,6 +845,7 @@ This project successfully implemented a complete communication system simulation
 \begin{enumerate}
     \item Forouzan, B. A. (2012). \textit{Data Communications and Networking}. McGraw-Hill.
     \item Haykin, S. (2001). \textit{Communication Systems}. Wiley.
+    \item Proakis, J. G., \& Salehi, M. (2008). \textit{Digital Communications}. McGraw-Hill.
 \end{enumerate}
 
 \end{document}
