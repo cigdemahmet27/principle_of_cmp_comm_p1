@@ -535,7 +535,7 @@ def encode_pcm(self, analog_samples, bit_depth=3):
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\textwidth]{pcm.png}
+    \includegraphics[width=0.9\textwidth]{pcm_new.png}
     \caption{PCM Encoding Example}
     \label{fig:pcm}
 \end{figure}
@@ -821,6 +821,235 @@ PSK Modulator & 4.611 & 1.759 & \textbf{2.62x} \\
 \end{table}
 
 The results demonstrate that NumPy vectorization provides significant speedups, especially for compute-intensive operations like modulation where array operations can replace iterative calculations.
+
+\subsection{AI Optimization Logs}
+
+The following shows the AI conversation logs used for optimizing the code:
+
+\textbf{Prompt 1 - Encoder Optimization Request:}
+\begin{quote}
+\textit{``Create optimized versions of the existing encoders using NumPy vectorization and pre-allocated arrays for better performance.''}
+\end{quote}
+
+\textbf{AI Response - Optimization Approach:}
+\begin{quote}
+\textit{``I'll create optimized encoder class using NumPy vectorization. Key optimizations:
+\begin{itemize}
+    \item Pre-allocated arrays instead of list.extend()
+    \item Vectorized operations instead of loops where possible
+    \item NumPy's repeat/tile for signal generation
+\end{itemize}''}
+\end{quote}
+
+\textbf{AI Generated Optimized NRZ-L Code:}
+\begin{lstlisting}
+def encode_nrz_l(self, bits):
+    """
+    NRZ-L - Fully Vectorized
+    Uses numpy array operations and repeat
+    """
+    bit_array = np.array([1 if b == '0' else -1 
+                          for b in bits], dtype=np.int8)
+    return np.repeat(bit_array, 2).tolist()
+\end{lstlisting}
+
+\vspace{0.5cm}
+
+\textbf{Prompt 2 - Modulator Optimization Request:}
+\begin{quote}
+\textit{``Create optimized versions of modulators using NumPy with pre-computed carriers and vectorized operations.''}
+\end{quote}
+
+\textbf{AI Response - Modulator Optimization Strategy:}
+\begin{quote}
+\textit{``Key optimizations for modulators:
+\begin{itemize}
+    \item Pre-computed carrier waves calculated once
+    \item Vectorized signal generation using tile and repeat
+    \item Reduced array concatenation overhead
+    \item Batch processing with reshape operations
+\end{itemize}''}
+\end{quote}
+
+\textbf{AI Generated Optimized ASK Modulator:}
+\begin{lstlisting}
+def modulate_ask(self, bits, T=1):
+    """
+    ASK - Fully Vectorized
+    Pre-computes carrier and uses tile+multiply
+    """
+    samples_per_bit = int(self.Fs * T)
+    n_bits = len(bits)
+    
+    # Pre-compute carrier for one bit period
+    t_bit = np.arange(samples_per_bit) / self.Fs
+    carrier = self.Amp * np.sin(2 * np.pi * self.Fc * t_bit)
+    
+    # Create amplitude array: 1 for '1', 0 for '0'
+    amplitudes = np.array([1.0 if b == '1' else 0.0 for b in bits])
+    
+    # Tile carrier and multiply by repeated amplitudes
+    signal = np.tile(carrier, n_bits) * np.repeat(amplitudes, samples_per_bit)
+    
+    return signal
+\end{lstlisting}
+
+\vspace{0.5cm}
+
+\textbf{Prompt 3 - Demodulator Optimization:}
+\begin{quote}
+\textit{``Apply batch processing and vectorized correlation for demodulators.''}
+\end{quote}
+
+\textbf{AI Generated Optimized PSK Demodulator:}
+\begin{lstlisting}
+def demodulate_psk(self, signal, T=1):
+    """PSK Demodulator - Batch Processing Version"""
+    signal = np.asarray(signal)
+    samples_per_bit = int(self.Fs * T)
+    num_bits = len(signal) // samples_per_bit
+    
+    # Reference carrier
+    t_bit = np.arange(samples_per_bit) / self.Fs
+    ref_wave = self.Amp * np.sin(2 * np.pi * self.Fc * t_bit)
+    
+    # Reshape and correlate in batch
+    signal_reshaped = signal[:num_bits * samples_per_bit].reshape(
+                             num_bits, samples_per_bit)
+    correlations = np.sum(signal_reshaped * ref_wave, axis=1)
+    
+    bits = np.where(correlations > 0, '1', '0')
+    return ''.join(bits)
+\end{lstlisting}
+
+\vspace{0.5cm}
+
+\textbf{AI Tools Used:}
+\begin{itemize}
+    \item \textbf{Tool 1:} Google Gemini (Antigravity) - Primary optimization assistant
+    \item \textbf{Tool 2:} Code analysis for identifying loop-based bottlenecks
+\end{itemize}
+
+%==========================================================================
+\section{Discussion}
+%==========================================================================
+
+This section discusses the key design choices made during the implementation of this communication system simulation, the rationale behind each decision, and their resulting outcomes.
+
+\subsection{Architectural Design Choices}
+
+\subsubsection{Modular Class-Based Architecture}
+
+\textbf{Design Choice:} I organized the codebase into separate Python modules with dedicated classes: \texttt{Encoders} for line coding, \texttt{Modulators} for carrier modulation, \texttt{Decoders} for signal recovery, and \texttt{Demodulators} for carrier demodulation.
+
+\textbf{Rationale:} This separation of concerns allows each module to be developed, tested, and optimized independently. It also mirrors the actual layered structure of communication systems where encoding and modulation are distinct operations.
+
+\textbf{Result:} The modular design enabled straightforward creation of optimized versions (\texttt{encoders\_optimized.py}, \texttt{modulators\_optimized.py}) without modifying the original implementations, allowing direct performance comparison through the benchmark system.
+
+\subsubsection{Signal Representation Strategy}
+
+\textbf{Design Choice:} I chose to represent digital signals using discrete voltage levels (+1, 0, -1) with 2 samples per bit period for line coding, rather than continuous time-domain representations.
+
+\textbf{Rationale:} This approach balances visualization clarity with computational efficiency. Two samples per bit clearly show the signal level while keeping arrays manageable. For analog signals, I used NumPy arrays with configurable sampling frequency ($F_s = 1000$ Hz default).
+
+\textbf{Result:} The plots clearly distinguish between encoding schemes (e.g., Manchester's mid-bit transitions vs. NRZ's flat regions), and the simulation runs efficiently even with long bit sequences.
+
+\subsection{Algorithm Selection Rationale}
+
+\subsubsection{Line Coding Selection}
+
+\textbf{Design Choice:} I implemented six line coding schemes: NRZ-L, NRZI, Bipolar-AMI, Pseudoternary, Manchester, and Differential Manchester.
+
+\textbf{Rationale:} This selection covers the three main categories of line coding:
+\begin{itemize}
+    \item \textbf{Unipolar/Bipolar NRZ:} Simplest schemes, baseline for comparison
+    \item \textbf{Multilevel (AMI, Pseudoternary):} DC-balanced with error detection capability
+    \item \textbf{Biphase (Manchester variants):} Self-clocking schemes essential for Ethernet
+\end{itemize}
+
+\textbf{Result:} Running the simulation demonstrates the trade-offs clearly---Manchester encoding shows guaranteed transitions in every bit period (enabling clock recovery), while NRZ-L produces flat regions during consecutive identical bits that would cause synchronization loss.
+
+\subsubsection{Modulation Scheme Selection}
+
+\textbf{Design Choice:} For digital-to-analog conversion, I implemented ASK, PSK (BPSK), and BFSK. For analog-to-analog, I implemented AM, FM, and PM.
+
+\textbf{Rationale:} Each scheme modifies a different carrier parameter (amplitude, phase, frequency), providing a complete educational demonstration of the fundamental modulation dimensions available in communication systems.
+
+\textbf{Result:} The waveform outputs show distinct visual characteristics---ASK clearly shows on-off behavior, BPSK shows phase inversions at bit boundaries, and BFSK shows frequency changes. The benchmark revealed that ASK and PSK modulators benefit most from optimization (2.79x and 2.62x speedups respectively) due to the trigonometric calculations involved.
+
+\subsubsection{Analog-to-Digital Conversion Methods}
+
+\textbf{Design Choice:} I implemented PCM with configurable bit depth (default 3 bits) and Delta Modulation with configurable step size.
+
+\textbf{Rationale:} PCM is the industry standard for high-quality digitization, while Delta Modulation demonstrates a simpler, differential approach. The configurable parameters allow exploration of the quality-vs-complexity trade-off.
+
+\textbf{Result:} With 3-bit PCM, the simulation produces 8 quantization levels yielding approximately 20 dB SQNR. Delta Modulation's staircase approximation visibly tracks the input signal, with step size determining tracking accuracy versus granular noise.
+
+\subsection{Implementation Design Decisions}
+
+\subsubsection{Signal Parameter Choices}
+
+\textbf{Design Choice:} I used consistent default parameters across all modules:
+\begin{itemize}
+    \item Carrier frequency $f_c = 10$ Hz (for visible waveform cycles)
+    \item Sampling frequency $F_s = 1000$ Hz (100 samples per carrier cycle)
+    \item Amplitude $A = 1$ (normalized)
+    \item Bit period $T = 1$ second (for clear visualization)
+\end{itemize}
+
+\textbf{Rationale:} These parameters ensure that plotted waveforms show multiple carrier cycles per bit, making modulation effects clearly visible while maintaining reasonable array sizes.
+
+\textbf{Result:} Each bit in the modulated output contains approximately 10 carrier cycles (1000 samples / 100 samples per cycle), providing visually clear modulation patterns in the generated figures.
+
+\subsubsection{State Management in Encoders}
+
+\textbf{Design Choice:} For state-dependent encodings (NRZI, Bipolar-AMI, Differential Manchester), I maintained state within the encoding loop rather than as class variables.
+
+\textbf{Rationale:} This ensures that each encoding call produces deterministic output regardless of previous calls, making testing and verification straightforward.
+
+\textbf{Result:} The NRZI encoder starts from a known level (+1) and inverts only on '1' bits. Bipolar-AMI alternates polarity starting from -1 (so first '1' becomes +1). These consistent starting conditions produce reproducible waveforms.
+
+\subsection{Optimization Strategy and Results}
+
+\subsubsection{NumPy Vectorization Approach}
+
+\textbf{Design Choice:} For the optimized implementations, I replaced Python loops with NumPy vectorized operations, specifically using \texttt{np.repeat()}, \texttt{np.tile()}, and pre-computed carrier templates.
+
+\textbf{Rationale:} NumPy operations execute in compiled C code and leverage SIMD instructions, providing significant speedups for array operations compared to Python loops.
+
+\textbf{Result:} Benchmark testing with 1000-bit inputs showed:
+\begin{itemize}
+    \item \textbf{Encoders (1.05x speedup):} Minimal improvement because the original operations were already simple (comparisons and list appends). NumPy overhead nearly offset the gains.
+    \item \textbf{Modulators (2.62x--2.79x speedup):} Significant improvement because trigonometric calculations (\texttt{np.sin()}) dominate the workload. Pre-computing a single carrier template and using \texttt{np.tile()} eliminated redundant calculations.
+\end{itemize}
+
+\subsubsection{Pre-computed Carrier Templates}
+
+\textbf{Design Choice:} In optimized modulators, the carrier waveform for one bit period is computed once and then tiled/scaled for the entire signal.
+
+\textbf{Rationale:} For ASK/PSK, the carrier shape is identical for each bit---only the amplitude or phase changes. Computing \texttt{sin(2$\pi$f$_c$t)} once and multiplying by amplitude coefficients avoids redundant trigonometric operations.
+
+\textbf{Result:} ASK modulation improved from 5.07 ms to 1.81 ms for 1000 bits. The optimization effectiveness increases with data size because NumPy's overhead is amortized over more samples.
+
+\subsection{GUI Design Choices}
+
+\textbf{Design Choice:} I built the GUI using Tkinter with a simple workflow: select transmission mode $\rightarrow$ select specific algorithm $\rightarrow$ enter data $\rightarrow$ view results.
+
+\textbf{Rationale:} Tkinter is included in Python's standard library (no additional dependencies), and the linear workflow matches how students conceptualize the encoding/modulation process.
+
+\textbf{Result:} Users can quickly experiment with different algorithms and immediately see the resulting waveforms, making the tool effective for educational purposes.
+
+\subsection{Summary of Design Outcomes}
+
+The design choices led to a simulation system that:
+\begin{enumerate}
+    \item Clearly demonstrates the visual differences between encoding/modulation schemes
+    \item Runs efficiently with optimized implementations showing up to 2.79x speedup
+    \item Maintains separation between original and optimized code for benchmarking
+    \item Provides an intuitive GUI for interactive exploration
+\end{enumerate}
+
+\textbf{Key Trade-off Observed:} The optimization effort was most effective for compute-intensive operations (modulators with trigonometric calculations) and least effective for simple operations (encoders with basic comparisons). This illustrates that optimization should target computational bottlenecks rather than being applied uniformly.
 
 %==========================================================================
 \section{Conclusions}

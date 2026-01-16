@@ -18,8 +18,16 @@ class DigitalDecoderOptimized:
     #  DIGITAL TO ANALOG (Source Decoding)
     # ==========================================
 
-    def decode_pcm(self, bits, bit_depth=3):
-        """PCM Decoder - Vectorized Version"""
+    def decode_pcm(self, bits, bit_depth=3, min_val=0.0, max_val=1.0):
+        """
+        PCM Decoder - Vectorized Version
+        
+        Args:
+            bits: Encoded bit string
+            bit_depth: Number of bits per sample
+            min_val: Original signal minimum value
+            max_val: Original signal maximum value
+        """
         if not bits:
             return []
         
@@ -32,7 +40,9 @@ class DigitalDecoderOptimized:
             for i in range(0, num_samples * bit_depth, bit_depth)
         ])
         
-        voltages = levels / (num_levels - 1)
+        # Normalize to 0-1, then scale to original range
+        normalized = levels / (num_levels - 1)
+        voltages = normalized * (max_val - min_val) + min_val
         return voltages.tolist()
 
     def decode_delta_modulation(self, bits, step_size=0.1):

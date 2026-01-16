@@ -26,15 +26,17 @@ class DigitalEncoderOptimized:
         """
         PCM Encoder - Vectorized Version
         Uses numpy for normalization and quantization in one pass.
+        
+        Returns: (encoded_bits, min_val, max_val) - tuple with bits and original range
         """
         samples = np.asarray(analog_samples)
         if len(samples) == 0:
-            return ""
+            return "", 0, 0
         
-        min_val, max_val = samples.min(), samples.max()
+        min_val, max_val = float(samples.min()), float(samples.max())
         
         if max_val == min_val:
-            return "0" * len(samples) * bit_depth
+            return "0" * len(samples) * bit_depth, min_val, max_val
         
         num_levels = 2 ** bit_depth
         
@@ -44,7 +46,8 @@ class DigitalEncoderOptimized:
         
         # Vectorized binary conversion
         format_str = f'0{bit_depth}b'
-        return ''.join(format(level, format_str) for level in levels)
+        encoded_bits = ''.join(format(level, format_str) for level in levels)
+        return encoded_bits, min_val, max_val
 
     def encode_delta_modulation(self, analog_samples, step_size=0.1):
         """

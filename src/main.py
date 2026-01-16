@@ -243,7 +243,7 @@ class CommunicationSimulator:
         t = np.linspace(0, 2*np.pi, 50) 
         input_signal = np.sin(t)
         
-        # Shift signal to be positive (0 to 2) for easier PCM/Delta logic
+        # Shift signal to be positive (0.2 to 2.2) for easier PCM/Delta logic
         input_signal = input_signal + 1.2 
 
         self.axs[0].plot(t, input_signal, color='orange', marker='o', markersize=4)
@@ -252,9 +252,12 @@ class CommunicationSimulator:
 
         # 2. Encode (Analog -> Digital Bits)
         encoded_bits = ""
+        min_val, max_val = 0.0, 1.0  # Default values for Delta Modulation
+        
         if "PCM" in algo:
             # bit_depth=3 means 3 bits per sample
-            encoded_bits = self.enc.encode_pcm(input_signal.tolist(), bit_depth=3)
+            # encode_pcm returns (bits, min_val, max_val)
+            encoded_bits, min_val, max_val = self.enc.encode_pcm(input_signal.tolist(), bit_depth=3)
         elif "Delta" in algo:
             # step_size determines how fast it can track changes
             encoded_bits = self.enc.encode_delta_modulation(input_signal.tolist(), step_size=0.4)
@@ -266,7 +269,8 @@ class CommunicationSimulator:
         # 3. Decode (Digital Bits -> Analog)
         reconstructed_signal = []
         if "PCM" in algo:
-            reconstructed_signal = self.dec.decode_pcm(encoded_bits, bit_depth=3)
+            # Pass min_val and max_val to reconstruct original amplitude range
+            reconstructed_signal = self.dec.decode_pcm(encoded_bits, bit_depth=3, min_val=min_val, max_val=max_val)
         elif "Delta" in algo:
             reconstructed_signal = self.dec.decode_delta_modulation(encoded_bits, step_size=0.4)
 

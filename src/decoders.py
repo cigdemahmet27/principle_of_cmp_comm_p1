@@ -9,12 +9,18 @@ class DigitalDecoder:
     #  Output: List of floats (Approximate Analog Signal)
     # ==========================================
 
-    def decode_pcm(self, bits, bit_depth=3):
+    def decode_pcm(self, bits, bit_depth=3, min_val=0.0, max_val=1.0):
         """
         PCM Decoder:
         1. Breaks the bit string into chunks of size 'bit_depth'.
         2. Converts binary chunk to integer level.
-        3. Maps integer level back to a normalized voltage (0.0 to 1.0).
+        3. Maps integer level back to original voltage range (min_val to max_val).
+        
+        Args:
+            bits: Encoded bit string
+            bit_depth: Number of bits per sample
+            min_val: Original signal minimum value
+            max_val: Original signal maximum value
         """
         if not bits:
             return []
@@ -35,8 +41,10 @@ class DigitalDecoder:
             level = int(chunk, 2)
             
             # Convert level back to normalized float (0.0 to 1.0)
-            # Formula: value = level / (max_level_index)
-            voltage = level / (num_levels - 1)
+            normalized = level / (num_levels - 1)
+            
+            # Scale back to original range
+            voltage = normalized * (max_val - min_val) + min_val
             
             analog_output.append(voltage)
             

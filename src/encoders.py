@@ -17,9 +17,11 @@ class DigitalEncoder:
         1. Normalize signal to 0-1 range.
         2. Quantize into 2^bit_depth levels.
         3. Convert level to binary string.
+        
+        Returns: (encoded_bits, min_val, max_val) - tuple with bits and original range
         """
         if not analog_samples:
-            return ""
+            return "", 0, 0
             
         # 1. Find range to normalize
         min_val = min(analog_samples)
@@ -27,7 +29,7 @@ class DigitalEncoder:
         
         # Avoid division by zero if flat line
         if max_val == min_val:
-            return "0" * len(analog_samples) * bit_depth
+            return "0" * len(analog_samples) * bit_depth, min_val, max_val
 
         num_levels = 2 ** bit_depth
         encoded_bits = ""
@@ -44,7 +46,7 @@ class DigitalEncoder:
             binary_string = format(level, f'0{bit_depth}b')
             encoded_bits += binary_string
             
-        return encoded_bits
+        return encoded_bits, min_val, max_val
 
     def encode_delta_modulation(self, analog_samples, step_size=0.1):
         """
